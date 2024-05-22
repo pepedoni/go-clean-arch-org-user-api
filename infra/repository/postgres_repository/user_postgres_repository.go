@@ -2,8 +2,10 @@ package postgres_repository
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
+	"github.com/pepedoni/go-clean-arch-org-user-api/constants"
 	"github.com/pepedoni/go-clean-arch-org-user-api/domain/user"
 	"github.com/pepedoni/go-clean-arch-org-user-api/dto"
 	"github.com/pepedoni/go-clean-arch-org-user-api/infra/database/postgres"
@@ -134,11 +136,14 @@ func (r *UserPostgresRepository) GetById(id string) (*user.User, error) {
 func (r *UserPostgresRepository) Delete(id string) error {
 	ctx := context.Background()
 
-	_, err := r.db.Exec(
+	result, err := r.db.Exec(
 		ctx,
 		queryDeleteUser,
 		id,
 	)
+	if result.RowsAffected() == 0 {
+		return errors.New(constants.NOT_FOUND)
+	}
 
 	if err != nil {
 		return err

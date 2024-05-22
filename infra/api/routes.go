@@ -7,6 +7,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/pepedoni/go-clean-arch-org-user-api/domain/login"
 	"github.com/pepedoni/go-clean-arch-org-user-api/domain/organization"
+	"github.com/pepedoni/go-clean-arch-org-user-api/domain/organization_user"
 	"github.com/pepedoni/go-clean-arch-org-user-api/domain/user"
 	"github.com/pepedoni/go-clean-arch-org-user-api/infra/api/handler"
 	redisCache "github.com/pepedoni/go-clean-arch-org-user-api/infra/cache/redis"
@@ -45,11 +46,18 @@ func mapOrganizationRoutes(api *gin.RouterGroup, postgresConnection postgres.Poo
 	service := organization.NewOrganizationService(repository, uuid.New())
 	organizationHandler := handler.NewOrganizationHandler(service)
 
+	repositoryOrganizationUser := postgres_repository.NewOrganizationUserPostgresRepository(postgresConnection)
+	serviceOrganizationUser := organization_user.NewOrganizationService(repositoryOrganizationUser, uuid.New())
+	organizationUserHandler := handler.NewOrganizationUserHandler(serviceOrganizationUser)
+
+	organizationsGroup.POST("/:orgId/users/:userId", organizationUserHandler.Create)
+	organizationsGroup.DELETE("/:orgId/users/:userId", organizationUserHandler.DeleteOrganization)
+
 	organizationsGroup.GET("", middlewares.RedisCacheByRequestUri(redisConnection, 600), organizationHandler.Get)
+	organizationsGroup.DELETE("/:orgId", middlewares.InvalidateCacheByRequestUri(redisConnection), organizationHandler.DeleteOrganization)
 	organizationsGroup.GET("/:id", middlewares.RedisCacheByRequestUri(redisConnection, 600), organizationHandler.GetById)
 	organizationsGroup.POST("", middlewares.InvalidateCacheLikeRequestUri(redisConnection), organizationHandler.Create)
 	organizationsGroup.PUT("/:id", middlewares.InvalidateCacheByRequestUri(redisConnection), organizationHandler.UpdateOrganization)
-	organizationsGroup.DELETE("/:id", middlewares.InvalidateCacheByRequestUri(redisConnection), organizationHandler.DeleteOrganization)
 }
 
 func mapLoginRoutes(api *gin.RouterGroup) {

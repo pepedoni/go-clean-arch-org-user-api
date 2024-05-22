@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/pepedoni/go-clean-arch-org-user-api/constants"
 	"github.com/pepedoni/go-clean-arch-org-user-api/domain/organization"
 	"github.com/pepedoni/go-clean-arch-org-user-api/dto"
 	"github.com/pepedoni/go-clean-arch-org-user-api/utils/errors/rest_errors"
@@ -40,6 +41,10 @@ func (uh *OrganizationHandler) Get(c *gin.Context) {
 		Page:  1,
 		Limit: 10,
 	}
+	if err := c.ShouldBindQuery(&filter); err != nil {
+		c.JSON(http.StatusBadRequest, rest_errors.NewBadRequestError("invalid query params"))
+		return
+	}
 	organizations, err := uh.OrganizationService.Get(filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err)
@@ -70,8 +75,12 @@ func (uh *OrganizationHandler) UpdateOrganization(c *gin.Context) {
 }
 
 func (uh *OrganizationHandler) DeleteOrganization(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("orgId")
 	if err := uh.OrganizationService.Delete(id); err != nil {
+		if err.Error() == constants.NOT_FOUND {
+			c.JSON(http.StatusNotFound, rest_errors.NewNotFoundError("organization not found"))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
