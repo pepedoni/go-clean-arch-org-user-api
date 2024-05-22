@@ -5,10 +5,14 @@ services:
       context: ./
       target: dev
     working_dir: /app
+    env_file:
+      - .env
     volumes:
       - ./:/app
     ports:
       - "9001:8080"
+    networks:
+      - go-clean-arch-org-user-api
     depends_on:
       - postgres
       - redis
@@ -16,10 +20,14 @@ services:
   postgres:
     container_name: go-clean-arch-org-user-api-postgres
     image: postgres:14
-    env_file:
-      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5435:5432"
+    networks:
+      - go-clean-arch-org-user-api
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -28,9 +36,14 @@ services:
     image: redis:alpine
     ports:
       - "6390:6379"
+    networks:
+      - go-clean-arch-org-user-api
     volumes:
       - redis_data:/data
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  go-clean-arch-org-user-api:

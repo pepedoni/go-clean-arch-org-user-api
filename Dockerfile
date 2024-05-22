@@ -2,8 +2,6 @@ FROM golang:alpine as base
 
 WORKDIR /app
 
-COPY . /app/
-
 RUN apk update && apk add bash inotify-tools && apk add git
 
 ENV TZ=America/Sao_Paulo
@@ -13,14 +11,13 @@ WORKDIR /app
 
 COPY ./go.mod /app/ 
 
-COPY ./ /app
-
 FROM base as dev
 
 RUN git clone https://github.com/go-delve/delve.git && \ 
     cd delve && \
     go install github.com/go-delve/delve/cmd/dlv
-RUN echo pwd
+
+COPY ./ /app
 
 RUN go mod tidy 
 
@@ -29,6 +26,8 @@ RUN go build -o /server -gcflags -N -gcflags -l
 ENTRYPOINT sh startScript.sh
 
 FROM base as prod
+
+COPY . /app/
 
 RUN go mod tidy
 RUN go build -o /server
