@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	"github.com/pepedoni/go-clean-arch-org-user-api/domain/login"
 	"github.com/pepedoni/go-clean-arch-org-user-api/domain/organization"
 	"github.com/pepedoni/go-clean-arch-org-user-api/domain/user"
 	"github.com/pepedoni/go-clean-arch-org-user-api/infra/api/handler"
@@ -21,6 +22,7 @@ var (
 
 func mapUserRoutes(api *gin.RouterGroup, postgresConnection postgres.PoolInterface, redisConnection *redis.Client) {
 	usersGroup := api.Group("/users")
+	usersGroup.Use(middlewares.OAuthMiddleware())
 
 	// repository := memory_repository.NewUserMemoryRepository()
 	repository := postgres_repository.NewUserPostgresRepository(postgresConnection)
@@ -36,6 +38,7 @@ func mapUserRoutes(api *gin.RouterGroup, postgresConnection postgres.PoolInterfa
 
 func mapOrganizationRoutes(api *gin.RouterGroup, postgresConnection postgres.PoolInterface, redisConnection *redis.Client) {
 	organizationsGroup := api.Group("/organizations")
+	organizationsGroup.Use(middlewares.OAuthMiddleware())
 
 	// repository := memory_repository.NewOrganizationMemoryRepository()
 	repository := postgres_repository.NewOrganizationPostgresRepository(postgresConnection)
@@ -49,8 +52,16 @@ func mapOrganizationRoutes(api *gin.RouterGroup, postgresConnection postgres.Poo
 	organizationsGroup.DELETE("/:id", middlewares.InvalidateCacheByRequestUri(redisConnection), organizationHandler.DeleteOrganization)
 }
 
+func mapLoginRoutes(api *gin.RouterGroup) {
+	loginGroup := api.Group("/login")
+
+	service := login.NewLoginService()
+	loginHandler := handler.NewLoginHandler(service)
+
+	loginGroup.POST("", loginHandler.Login)
+}
+
 func StartApplication() {
-	// router.use(OAuthMiddleware())
 	api := router.Group("/api")
 
 	ctx := context.Background()
@@ -64,6 +75,7 @@ func StartApplication() {
 
 	mapUserRoutes(api, postgresConnection, redisConnection)
 	mapOrganizationRoutes(api, postgresConnection, redisConnection)
+	mapLoginRoutes(api)
 
 	router.Run(":8080")
 }
